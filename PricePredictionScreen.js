@@ -1,23 +1,65 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TextInput, Button } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
 
 import { predictCarPrice } from './PredictPrice';
 
+const BASE_URL = 'http://127.0.0.1:8000';
+
 const PricePredictionScreen = () => {
+    const [vehicleMakes, setVehicleMakes] = useState([]);
     const [selectedMake, setSelectedMake] = useState('');
+
+    const [vehicleModels, setVehicleModels] = useState([]);
     const [selectedModel, setSelectedModel] = useState('');
+
     const [selectedFuelType, setSelectedFuelType] = useState('');
     const [odometer, setOdometer] = useState('');
     const [selectedYOM, setSelectedYOM] = useState('');
     const [predictedPrice, setPredictedPrice] = useState(null);
 
+    useEffect(() => {
+        fetchVehicleMakesFromAPI();
+    }, []);
+
+    const fetchVehicleMakesFromAPI = async () => {
+        try {
+            const response = await fetch(`${BASE_URL}/api/vehicle/v1-get-vehicle-makes`);
+            if (!response.ok) {
+                throw new Error('Failed to fetch vehicle makes');
+            }
+            const data = await response.json();
+            console.log(data);
+            setVehicleMakes(data);
+        } catch (error) {
+            Alert.alert('Error', error.message);
+        }
+    };
+
+    const fetchVehicleModelsForMake = async (make) => {
+        try {
+            console.log(make)
+            const response = await fetch(`${BASE_URL}/api/vehicle/v1-get-matching-vehicle-models?make=${make}`);
+            if (!response.ok) {
+                throw new Error('Failed to fetch vehicle models');
+            }
+            const data = await response.json();
+            console.log(data);
+            setVehicleModels(data);
+        } catch (error) {
+            Alert.alert('Error', error.message);
+        }
+    };
+
     const handleMakeChange = (make) => {
         setSelectedMake(make);
+        fetchVehicleModelsForMake(make); // Update to use the selected make
     };
+
 
     const handleModelChange = (model) => {
         setSelectedModel(model);
+        // fetchVehicleModelsForMake(selectedMake);
     };
 
     const handleFuelTypeChange = (fuelType) => {
@@ -51,7 +93,7 @@ const PricePredictionScreen = () => {
             Alert.alert('Error', error.message);
         }
     };
-    
+
 
     return (
         <View style={styles.container}>
@@ -60,28 +102,21 @@ const PricePredictionScreen = () => {
             <Picker
                 style={styles.picker}
                 selectedValue={selectedMake}
-                onValueChange={(itemValue) => handleMakeChange(itemValue)}>
-                <Picker.Item label="Toyota" value="toyota" />
-                <Picker.Item label="Honda" value="honda" />
+                onValueChange={handleMakeChange}>
+                {vehicleMakes.map((make, index) => (
+                    <Picker.Item key={index} label={make} value={make} />
+                ))}
             </Picker>
 
             <Text style={styles.label}>Select Car Model:</Text>
             <Picker
                 style={styles.picker}
                 selectedValue={selectedModel}
-                onValueChange={(itemValue) => handleModelChange(itemValue)}>
-                {selectedMake === 'toyota' && (
-                    <>
-                        <Picker.Item label="Corolla" value="corolla" />
-                        <Picker.Item label="Camry" value="camry" />
-                    </>
-                )}
-                {selectedMake === 'honda' && (
-                    <>
-                        <Picker.Item label="Civic" value="civic" />
-                        <Picker.Item label="Accord" value="accord" />
-                    </>
-                )}
+                onValueChange={handleModelChange}>
+                <Picker.Item label="Select Model" value="" />
+                {vehicleModels.map((model, index) => (
+                    <Picker.Item key={index} label={model} value={model.toLowerCase()} />
+                ))}
             </Picker>
 
             <Text style={styles.label}>Select Fuel Type:</Text>
