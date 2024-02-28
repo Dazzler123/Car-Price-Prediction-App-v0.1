@@ -6,6 +6,15 @@ import { predictCarPrice } from './PredictPrice';
 
 const BASE_URL = 'http://127.0.0.1:8000';
 
+// Function to initialize year of manufacture dropdown values
+const initializedYOMs = () => {
+    const YOMs = [];
+    for (let i = 1960; i <= 2024; i++) {
+        YOMs.push(String(i));
+    }
+    return YOMs;
+};
+
 const PricePredictionScreen = () => {
     const [vehicleMakes, setVehicleMakes] = useState([]);
     const [selectedMake, setSelectedMake] = useState('');
@@ -13,9 +22,9 @@ const PricePredictionScreen = () => {
     const [vehicleModels, setVehicleModels] = useState([]);
     const [selectedModel, setSelectedModel] = useState('');
 
-    const [selectedFuelType, setSelectedFuelType] = useState('');
+    const [selectedFuelType, setSelectedFuelType] = useState('Petrol');
     const [odometer, setOdometer] = useState('');
-    const [selectedYOM, setSelectedYOM] = useState('');
+    const [selectedYOM, setSelectedYOM] = useState(String(new Date().getFullYear()));
     const [predictedPrice, setPredictedPrice] = useState(null);
 
     useEffect(() => {
@@ -58,7 +67,9 @@ const PricePredictionScreen = () => {
 
 
     const handleModelChange = (model) => {
-        setSelectedModel(model);
+    const formattedModel = model.split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
+    console.log(formattedModel)
+        setSelectedModel(formattedModel);
         // fetchVehicleModelsForMake(selectedMake);
     };
 
@@ -83,15 +94,30 @@ const PricePredictionScreen = () => {
             model: selectedModel,
             fuelType: selectedFuelType,
             odometer: parseInt(odometer),
-            yom: parseInt(selectedYOM),
+            yom: selectedYOM,
         };
 
-        try {
-            const price = await predictCarPrice(data);
-            setPredictedPrice(price);
-        } catch (error) {
-            Alert.alert('Error', error.message);
-        }
+        console.log(data)
+
+            try {
+                const response = await fetch(`${BASE_URL}/api/vehicle/v1-predict-vehicle-price`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(data),
+                });
+
+                if (!response.ok) {
+                    throw new Error('Failed to predict vehicle price');
+                }
+
+                const result = await response.json();
+                console.log('Prediction Result:', result);
+                setPredictedPrice(result); // Assuming result is the predicted price
+            } catch (error) {
+                console.error('Error predicting car price:', error.message);
+            }
     };
 
 
@@ -124,8 +150,8 @@ const PricePredictionScreen = () => {
                 style={styles.picker}
                 selectedValue={selectedFuelType}
                 onValueChange={(itemValue) => handleFuelTypeChange(itemValue)}>
-                <Picker.Item label="Petrol" value="petrol" />
-                <Picker.Item label="Diesel" value="diesel" />
+                <Picker.Item label="Petrol" value="Petrol" />
+                <Picker.Item label="Diesel" value="Diesel" />
             </Picker>
 
             <Text style={styles.label}>Odometer (KM):</Text>
@@ -139,14 +165,13 @@ const PricePredictionScreen = () => {
 
             <Text style={styles.label}>Select Year of Manufacture:</Text>
             <Picker
-                style={styles.picker}
-                selectedValue={selectedYOM}
-                onValueChange={(itemValue) => handleYOMChange(itemValue)}>
-                <Picker.Item label="2022" value="2022" />
-                <Picker.Item label="2021" value="2021" />
-                <Picker.Item label="2020" value="2020" />
-                {/* Add more years as needed */}
-            </Picker>
+                            style={styles.picker}
+                            selectedValue={selectedYOM}
+                            onValueChange={(itemValue) => handleYOMChange(itemValue)}>
+                            {initializedYOMs().map((yom, index) => (
+                                <Picker.Item key={index} label={yom} value={yom} />
+                            ))}
+                        </Picker>
             <Button
                 title="Predict Price"
                 onPress={handleButtonPress}
