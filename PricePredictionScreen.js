@@ -67,9 +67,8 @@ const PricePredictionScreen = () => {
 
 
     const handleModelChange = (model) => {
-    const formattedModel = model.split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
-    console.log(formattedModel)
-        setSelectedModel(formattedModel);
+      const formattedModel = model.split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
+      setSelectedModel(formattedModel);
         // fetchVehicleModelsForMake(selectedMake);
     };
 
@@ -141,7 +140,7 @@ const PricePredictionScreen = () => {
                 onValueChange={handleModelChange}>
                 <Picker.Item label="Select Model" value="" />
                 {vehicleModels.map((model, index) => (
-                    <Picker.Item key={index} label={model} value={model.toLowerCase()} />
+                    <Picker.Item key={index} label={model} value={model} />
                 ))}
             </Picker>
 
