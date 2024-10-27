@@ -1,8 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TextInput, Button } from 'react-native';
+import { View, Text, StyleSheet, TextInput, TouchableOpacity, Alert } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
-
-import { predictCarPrice } from './PredictPrice';
 
 const BASE_URL = 'http://127.0.0.1:8000';
 
@@ -38,7 +36,6 @@ const PricePredictionScreen = () => {
                 throw new Error('Failed to fetch vehicle makes');
             }
             const data = await response.json();
-            console.log(data);
             setVehicleMakes(data);
         } catch (error) {
             Alert.alert('Error', error.message);
@@ -47,13 +44,11 @@ const PricePredictionScreen = () => {
 
     const fetchVehicleModelsForMake = async (make) => {
         try {
-            console.log(make)
             const response = await fetch(`${BASE_URL}/api/vehicle/v1-get-matching-vehicle-models?make=${make}`);
             if (!response.ok) {
                 throw new Error('Failed to fetch vehicle models');
             }
             const data = await response.json();
-            console.log(data);
             setVehicleModels(data);
         } catch (error) {
             Alert.alert('Error', error.message);
@@ -62,14 +57,11 @@ const PricePredictionScreen = () => {
 
     const handleMakeChange = (make) => {
         setSelectedMake(make);
-        fetchVehicleModelsForMake(make); // Update to use the selected make
+        fetchVehicleModelsForMake(make);
     };
 
-
     const handleModelChange = (model) => {
-      const formattedModel = model.split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
-      setSelectedModel(formattedModel);
-        // fetchVehicleModelsForMake(selectedMake);
+        setSelectedModel(model);
     };
 
     const handleFuelTypeChange = (fuelType) => {
@@ -77,7 +69,6 @@ const PricePredictionScreen = () => {
     };
 
     const handleOdometerChange = (text) => {
-        // Validate input to allow only numeric characters
         if (/^\d+$/.test(text) || text === '') {
             setOdometer(text);
         }
@@ -92,37 +83,35 @@ const PricePredictionScreen = () => {
             make: selectedMake,
             model: selectedModel,
             fuelType: selectedFuelType,
-            odometer: parseInt(odometer),
+            odometer: odometer === '' ? 0 : parseInt(odometer),
             yom: selectedYOM,
         };
 
-        console.log(data)
+        try {
+            const response = await fetch(`${BASE_URL}/api/vehicle/v1-predict-vehicle-price`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(data),
+            });
 
-            try {
-                const response = await fetch(`${BASE_URL}/api/vehicle/v1-predict-vehicle-price`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify(data),
-                });
-
-                if (!response.ok) {
-                    throw new Error('Failed to predict vehicle price');
-                }
-
-                const result = await response.json();
-                console.log('Prediction Result:', result);
-                setPredictedPrice(result); // Assuming result is the predicted price
-            } catch (error) {
-                console.error('Error predicting car price:', error.message);
+            if (!response.ok) {
+                throw new Error('Failed to predict vehicle price');
             }
-    };
 
+            const result = await response.json();
+            setPredictedPrice(result);
+        } catch (error) {
+            Alert.alert('Error', error.message);
+        }
+    };
 
     return (
         <View style={styles.container}>
-            <Text style={styles.heading}>Car Price Prediction V0.1</Text>
+            <Text style={styles.heading}>AutoPricePredict</Text>
+            <Text style={styles.subHeading}>Intelligent Vehicle Price Estimator</Text>
+
             <Text style={styles.label}>Select Car Make:</Text>
             <Picker
                 style={styles.picker}
@@ -148,7 +137,7 @@ const PricePredictionScreen = () => {
             <Picker
                 style={styles.picker}
                 selectedValue={selectedFuelType}
-                onValueChange={(itemValue) => handleFuelTypeChange(itemValue)}>
+                onValueChange={handleFuelTypeChange}>
                 <Picker.Item label="Petrol" value="Petrol" />
                 <Picker.Item label="Diesel" value="Diesel" />
             </Picker>
@@ -162,25 +151,24 @@ const PricePredictionScreen = () => {
                 placeholder="Enter Odometer"
             />
 
-            <Text style={styles.label}>Select Year of Manufacture:</Text>
+            <Text style={styles.label}>Year of Manufacture:</Text>
             <Picker
-                            style={styles.picker}
-                            selectedValue={selectedYOM}
-                            onValueChange={(itemValue) => handleYOMChange(itemValue)}>
-                            {initializedYOMs().map((yom, index) => (
-                                <Picker.Item key={index} label={yom} value={yom} />
-                            ))}
-                        </Picker>
-            <Button
-                title="Predict Price"
-                onPress={handleButtonPress}
-                color="green"
-                style={styles.button}
-            />
+                style={styles.picker}
+                selectedValue={selectedYOM}
+                onValueChange={handleYOMChange}>
+                {initializedYOMs().map((yom, index) => (
+                    <Picker.Item key={index} label={yom} value={yom} />
+                ))}
+            </Picker>
+
+            <TouchableOpacity style={styles.button} onPress={handleButtonPress}>
+                <Text style={styles.buttonText}>Predict Price</Text>
+            </TouchableOpacity>
+
             {predictedPrice !== null && (
-                <Text style={styles.lbl_predicted_price}>Rs. {predictedPrice} /=</Text>
+                <Text style={styles.prediction}>Predicted Price: Rs. {predictedPrice} /=</Text>
             )}
-            <Text style={styles.footer_label}>@2024 Designed & Implemented by Dasindu Hewagamage</Text>
+            <Text style={styles.footer}>@2024 Designed & Implemented by Dasindu Hewagamage</Text>
         </View>
     );
 };
@@ -189,56 +177,72 @@ const styles = StyleSheet.create({
     container: {
         flex: 1,
         alignItems: 'center',
-        justifyContent: 'flex-start',
         paddingTop: 50,
         paddingHorizontal: 20,
-        backgroundColor: '#f1f2f6'
+        backgroundColor: '#f5f5f5',
     },
     heading: {
-        fontSize: 30,
+        fontSize: 36,
         fontWeight: 'bold',
-        textAlign: 'center',
-        color: 'blue',
-        fontFamily: 'Accord',
-        marginBottom: 30
+        color: '#1E90FF',
+        marginBottom: 7,
+        marginTop: 47,
+    },
+    subHeading: {
+        fontSize: 18,
+        color: '#696969',
+        marginBottom: 70,
     },
     label: {
-        fontSize: 16,
-        marginBottom: 10,
-        fontWeight: 'bold'
+        fontSize: 18,
+        color: '#333',
+        marginBottom: 5,
+        fontWeight: '500',
     },
     picker: {
         width: '100%',
-        marginBottom: 20
+        marginBottom: 15,
+        backgroundColor: '#fff',
+        borderRadius: 8,
+        borderWidth: 1,
+        height: 40,
+        fontSize: 15,
+        borderColor: '#ddd',
     },
     input: {
         height: 40,
         width: '100%',
-        borderColor: 'gray',
+        borderColor: '#ddd',
         borderWidth: 1,
         paddingHorizontal: 10,
-        marginBottom: 20
+        borderRadius: 8,
+        marginBottom: 20,
+        fontSize: 15,
+        backgroundColor: '#fff',
     },
     button: {
         width: '100%',
-        marginBottom: 20,
+        paddingVertical: 12,
+        borderRadius: 8,
+        backgroundColor: '#2ecc71',
+        alignItems: 'center',
+        marginTop: 20,
     },
-    lbl_predicted_price: {
-        fontSize: 20,
+    buttonText: {
+        color: '#fff',
+        fontSize: 16,
         fontWeight: 'bold',
-        textAlign: 'center',
-        color: 'red',
-        fontFamily: 'Accord',
-        marginTop: 40
     },
-    footer_label: {
-        fontSize: 13,
-        fontWeight: 'normal',
-        textAlign: 'center',
-        color: 'gray',
-        fontFamily: 'Accord',
-        marginTop: 50,
-        marginBottom: 2
+    prediction: {
+        fontSize: 20,
+        color: '#e74c3c',
+        marginTop: 20,
+        fontWeight: 'bold',
+    },
+    footer: {
+        fontSize: 15,
+        color: '#aaa',
+        marginTop: 40,
     },
 });
 
