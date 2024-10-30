@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TextInput, TouchableOpacity, Alert } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
 
-const BASE_URL = 'http://127.0.0.1:8000';
+const BASE_URL = 'http://13.53.43.167:8000';
 
 // Function to initialize year of manufacture dropdown values
 const initializedYOMs = () => {
@@ -186,12 +186,12 @@ const styles = StyleSheet.create({
         fontWeight: 'bold',
         color: '#1E90FF',
         marginBottom: 7,
-        marginTop: 47,
+        marginTop: 27,
     },
     subHeading: {
         fontSize: 18,
         color: '#696969',
-        marginBottom: 70,
+        marginBottom: 55,
     },
     label: {
         fontSize: 18,
@@ -242,7 +242,7 @@ const styles = StyleSheet.create({
     footer: {
         fontSize: 15,
         color: '#aaa',
-        marginTop: 40,
+        marginTop: 20,
     },
 });
 
